@@ -16,7 +16,7 @@ class ExcelApp:
 
         self.sidebar = ttk.Frame(self.root, padding=10)
         self.sidebar.grid(row=0, column=0, sticky="nsw", padx=10, pady=10)
-        
+
         fields = ["Name", "Age", "Phone", "Email", "Address", "City", "Start Date", "End Date"]
         self.entries = {}
 
@@ -77,15 +77,15 @@ class ExcelApp:
 
         self.tree.bind("<ButtonRelease-1>", self.select_item)
 
-        self.filepath = None
+        self.filepath = None  # Ensures the file path is correctly retained
 
     def load_excel(self):
         filepath = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx")])
         if not filepath:
             return
 
-        self.filepath = filepath
-        self.tree.delete(*self.tree.get_children())
+        self.filepath = filepath  # Store the loaded file path
+        self.tree.delete(*self.tree.get_children())  # Clear existing table data
 
         try:
             wb = openpyxl.load_workbook(filepath)
@@ -103,12 +103,15 @@ class ExcelApp:
             messagebox.showwarning("Warning", "Please load an Excel file first.")
             return
 
-        values = [self.entries[field].get() for field in self.entries]
+        values = [self.entries[field].get().strip() for field in self.entries]
         values.append(self.subscription_var.get())
         values.append("Employed" if self.employment_var.get() else "Unemployed")
 
-        if not values[0] or not values[1].isdigit():
-            messagebox.showerror("Input Error", "Please enter a valid Name and Age.")
+        if not values[0]:  
+            messagebox.showerror("Input Error", "Name cannot be empty.")
+            return
+        if not values[1].isdigit():
+            messagebox.showerror("Input Error", "Age must be a valid number.")
             return
 
         try:
@@ -142,7 +145,7 @@ class ExcelApp:
             messagebox.showwarning("Warning", "Please select an entry to edit.")
             return
 
-        new_values = [self.entries[field].get() for field in self.entries]
+        new_values = [self.entries[field].get().strip() for field in self.entries]
         new_values.append(self.subscription_var.get())
         new_values.append("Employed" if self.employment_var.get() else "Unemployed")
 
