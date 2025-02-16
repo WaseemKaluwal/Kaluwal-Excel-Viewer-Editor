@@ -5,7 +5,7 @@ Kaluwal Excel Viewer & Editor is a Python-based GUI application built using Tkin
 
 ## Features
 - Load Excel files (.xlsx) and display contents in a table.
-- Insert new data entries (Name, Age, Subscription Status, Employment Status).
+- Insert new data entries (Name, Age, Subscription Status, Employment Status or more).
 - Supports dark mode using `ttkbootstrap`.
 - Simple and user-friendly interface.
 
