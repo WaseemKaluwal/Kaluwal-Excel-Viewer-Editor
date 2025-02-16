@@ -38,6 +38,9 @@ class ExcelApp:
         self.insert_button = ttk.Button(self.sidebar, text="Insert", command=self.insert_data)
         self.insert_button.pack(fill=tk.X, pady=5)
         
+        self.edit_button = ttk.Button(self.sidebar, text="Edit Selected", command=self.edit_data)
+        self.edit_button.pack(fill=tk.X, pady=5)
+        
         self.load_button = ttk.Button(self.sidebar, text="Load Excel", command=self.load_excel)
         self.load_button.pack(fill=tk.X, pady=5)
         
@@ -59,9 +62,10 @@ class ExcelApp:
         self.tree.heading("Employment", text="Employment", anchor="center")
         
         self.tree.pack(fill=tk.BOTH, expand=True)
+        self.tree.bind("<ButtonRelease-1>", self.select_item)
         
         self.filepath = None
-
+    
     def load_excel(self):
         filepath = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx")])
         if not filepath:
@@ -105,6 +109,51 @@ class ExcelApp:
             self.tree.insert("", tk.END, values=(name, age, subscription, employment))
         except Exception as e:
             messagebox.showerror("Error", f"Failed to insert data: {e}")
+    
+    def select_item(self, event):
+        selected = self.tree.selection()
+        if not selected:
+            return
+        
+        item = self.tree.item(selected[0], "values")
+        self.name_entry.delete(0, tk.END)
+        self.name_entry.insert(0, item[0])
+        self.age_entry.delete(0, tk.END)
+        self.age_entry.insert(0, item[1])
+        self.subscription_var.set(item[2])
+        self.employment_var.set(item[3] == "Employed")
+    
+    def edit_data(self):
+        selected = self.tree.selection()
+        if not selected:
+            messagebox.showwarning("Warning", "Please select an entry to edit.")
+            return
+        
+        new_name = self.name_entry.get()
+        new_age = self.age_entry.get()
+        new_subscription = self.subscription_var.get()
+        new_employment = "Employed" if self.employment_var.get() else "Unemployed"
+        
+        if not new_name or not new_age.isdigit():
+            messagebox.showerror("Input Error", "Please enter a valid Name and Age.")
+            return
+        
+        try:
+            wb = openpyxl.load_workbook(self.filepath)
+            sheet = wb.active
+            
+            row_index = self.tree.index(selected[0]) + 2  # Excel rows start from 1 and we have headers
+            sheet.cell(row=row_index, column=1, value=new_name)
+            sheet.cell(row=row_index, column=2, value=int(new_age))
+            sheet.cell(row=row_index, column=3, value=new_subscription)
+            sheet.cell(row=row_index, column=4, value=new_employment)
+            
+            wb.save(self.filepath)
+            wb.close()
+            
+            self.tree.item(selected[0], values=(new_name, new_age, new_subscription, new_employment))
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to update data: {e}")
 
 if __name__ == "__main__":
     root = tb.Window(themename="darkly")
