@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import openpyxl
+from openpyxl.styles import Font, PatternFill
 import ttkbootstrap as tb
 
 class ExcelApp:
@@ -17,10 +18,10 @@ class ExcelApp:
         self.sidebar = ttk.Frame(self.root, padding=10)
         self.sidebar.grid(row=0, column=0, sticky="nsw", padx=10, pady=10)
 
-        fields = ["Name", "Age", "Phone", "Email", "Address", "City", "Start Date", "End Date"]
+        self.fields = ["Name", "Age", "Phone", "Email", "Address", "City", "Start Date", "End Date"]
         self.entries = {}
 
-        for field in fields:
+        for field in self.fields:
             ttk.Label(self.sidebar, text=f"{field}:").grid(sticky="w", padx=5, pady=2)
             entry = ttk.Entry(self.sidebar)
             entry.grid(sticky="ew", padx=5, pady=2)
@@ -55,10 +56,10 @@ class ExcelApp:
         self.table_frame = ttk.Frame(self.root)
         self.table_frame.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
 
-        columns = fields + ["Subscription", "Employment"]
-        self.tree = ttk.Treeview(self.table_frame, columns=columns, show='headings')
+        self.columns = self.fields + ["Subscription", "Employment"]
+        self.tree = ttk.Treeview(self.table_frame, columns=self.columns, show='headings')
 
-        for col in columns:
+        for col in self.columns:
             self.tree.column(col, anchor="center", width=120, stretch=True)
             self.tree.heading(col, text=col, anchor="center")
 
@@ -77,15 +78,15 @@ class ExcelApp:
 
         self.tree.bind("<ButtonRelease-1>", self.select_item)
 
-        self.filepath = None  # Ensures the file path is correctly retained
+        self.filepath = None
 
     def load_excel(self):
         filepath = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx")])
         if not filepath:
             return
 
-        self.filepath = filepath  # Store the loaded file path
-        self.tree.delete(*self.tree.get_children())  # Clear existing table data
+        self.filepath = filepath
+        self.tree.delete(*self.tree.get_children())
 
         try:
             wb = openpyxl.load_workbook(filepath)
@@ -103,20 +104,22 @@ class ExcelApp:
             messagebox.showwarning("Warning", "Please load an Excel file first.")
             return
 
-        values = [self.entries[field].get().strip() for field in self.entries]
+        values = [self.entries[field].get() for field in self.entries]
         values.append(self.subscription_var.get())
         values.append("Employed" if self.employment_var.get() else "Unemployed")
 
-        if not values[0]:  
-            messagebox.showerror("Input Error", "Name cannot be empty.")
-            return
-        if not values[1].isdigit():
-            messagebox.showerror("Input Error", "Age must be a valid number.")
+        if not values[0] or not values[1].isdigit():
+            messagebox.showerror("Input Error", "Please enter a valid Name and Age.")
             return
 
         try:
             wb = openpyxl.load_workbook(self.filepath)
             sheet = wb.active
+
+            if sheet.max_row == 1:
+                sheet.append(self.columns)  # Add headers if not present
+                self.format_headers(sheet)
+
             sheet.append(values)
             wb.save(self.filepath)
             wb.close()
@@ -145,7 +148,7 @@ class ExcelApp:
             messagebox.showwarning("Warning", "Please select an entry to edit.")
             return
 
-        new_values = [self.entries[field].get().strip() for field in self.entries]
+        new_values = [self.entries[field].get() for field in self.entries]
         new_values.append(self.subscription_var.get())
         new_values.append("Employed" if self.employment_var.get() else "Unemployed")
 
@@ -179,6 +182,15 @@ class ExcelApp:
             self.tree.delete(selected[0])
         except Exception as e:
             messagebox.showerror("Error", f"Failed to delete data: {e}")
+
+    def format_headers(self, sheet):
+        header_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+        bold_font = Font(bold=True)
+        for col_num, header in enumerate(self.columns, start=1):
+            cell = sheet.cell(row=1, column=col_num, value=header)
+            cell.font = bold_font
+            cell.fill = header_fill
+            sheet.column_dimensions[cell.column_letter].width = len(header) + 5
 
 if __name__ == "__main__":
     root = tb.Window(themename="darkly")
