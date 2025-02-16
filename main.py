@@ -8,7 +8,7 @@ class ExcelApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Kaluwal Excel Viewer & Editor")
-        self.root.geometry("1000x500")
+        self.root.geometry("1500x800")
         
         # Use ttkbootstrap for dark mode
         self.style = tb.Style("darkly")
@@ -17,13 +17,14 @@ class ExcelApp:
         self.sidebar = ttk.Frame(self.root, padding=10)
         self.sidebar.pack(side=tk.LEFT, fill=tk.Y)
         
-        ttk.Label(self.sidebar, text="Name:").pack(anchor="w")
-        self.name_entry = ttk.Entry(self.sidebar)
-        self.name_entry.pack(fill=tk.X, pady=5)
+        fields = ["Name", "Age", "Phone", "Email", "Address", "City", "Start Date", "End Date"]
+        self.entries = {}
         
-        ttk.Label(self.sidebar, text="Age:").pack(anchor="w")
-        self.age_entry = ttk.Entry(self.sidebar)
-        self.age_entry.pack(fill=tk.X, pady=5)
+        for field in fields:
+            ttk.Label(self.sidebar, text=f"{field}:").pack(anchor="w")
+            entry = ttk.Entry(self.sidebar)
+            entry.pack(fill=tk.X, pady=5)
+            self.entries[field] = entry
         
         ttk.Label(self.sidebar, text="Subscription:").pack(anchor="w")
         self.subscription_var = tk.StringVar(value="Subscribed")
@@ -48,18 +49,12 @@ class ExcelApp:
         self.table_frame = ttk.Frame(self.root)
         self.table_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
         
-        self.tree = ttk.Treeview(self.table_frame, columns=("Name", "Age", "Subscription", "Employment"), show='headings')
+        columns = fields + ["Subscription", "Employment"]
+        self.tree = ttk.Treeview(self.table_frame, columns=columns, show='headings')
         
-        # Adjust column width and alignment
-        self.tree.column("Name", anchor="center", width=150, stretch=True)
-        self.tree.column("Age", anchor="center", width=80, stretch=True)
-        self.tree.column("Subscription", anchor="center", width=120, stretch=True)
-        self.tree.column("Employment", anchor="center", width=120, stretch=True)
-        
-        self.tree.heading("Name", text="Name", anchor="center")
-        self.tree.heading("Age", text="Age", anchor="center")
-        self.tree.heading("Subscription", text="Subscription", anchor="center")
-        self.tree.heading("Employment", text="Employment", anchor="center")
+        for col in columns:
+            self.tree.column(col, anchor="center", width=120, stretch=True)
+            self.tree.heading(col, text=col, anchor="center")
         
         self.tree.pack(fill=tk.BOTH, expand=True)
         self.tree.bind("<ButtonRelease-1>", self.select_item)
@@ -90,23 +85,22 @@ class ExcelApp:
             messagebox.showwarning("Warning", "Please load an Excel file first.")
             return
         
-        name = self.name_entry.get()
-        age = self.age_entry.get()
-        subscription = self.subscription_var.get()
-        employment = "Employed" if self.employment_var.get() else "Unemployed"
+        values = [self.entries[field].get() for field in self.entries]
+        values.append(self.subscription_var.get())
+        values.append("Employed" if self.employment_var.get() else "Unemployed")
         
-        if not name or not age.isdigit():
+        if not values[0] or not values[1].isdigit():
             messagebox.showerror("Input Error", "Please enter a valid Name and Age.")
             return
         
         try:
             wb = openpyxl.load_workbook(self.filepath)
             sheet = wb.active
-            sheet.append([name, int(age), subscription, employment])
+            sheet.append(values)
             wb.save(self.filepath)
             wb.close()
             
-            self.tree.insert("", tk.END, values=(name, age, subscription, employment))
+            self.tree.insert("", tk.END, values=values)
         except Exception as e:
             messagebox.showerror("Error", f"Failed to insert data: {e}")
     
@@ -116,12 +110,13 @@ class ExcelApp:
             return
         
         item = self.tree.item(selected[0], "values")
-        self.name_entry.delete(0, tk.END)
-        self.name_entry.insert(0, item[0])
-        self.age_entry.delete(0, tk.END)
-        self.age_entry.insert(0, item[1])
-        self.subscription_var.set(item[2])
-        self.employment_var.set(item[3] == "Employed")
+        
+        for i, field in enumerate(self.entries):
+            self.entries[field].delete(0, tk.END)
+            self.entries[field].insert(0, item[i])
+        
+        self.subscription_var.set(item[len(self.entries)])
+        self.employment_var.set(item[len(self.entries) + 1] == "Employed")
     
     def edit_data(self):
         selected = self.tree.selection()
@@ -129,12 +124,11 @@ class ExcelApp:
             messagebox.showwarning("Warning", "Please select an entry to edit.")
             return
         
-        new_name = self.name_entry.get()
-        new_age = self.age_entry.get()
-        new_subscription = self.subscription_var.get()
-        new_employment = "Employed" if self.employment_var.get() else "Unemployed"
+        new_values = [self.entries[field].get() for field in self.entries]
+        new_values.append(self.subscription_var.get())
+        new_values.append("Employed" if self.employment_var.get() else "Unemployed")
         
-        if not new_name or not new_age.isdigit():
+        if not new_values[0] or not new_values[1].isdigit():
             messagebox.showerror("Input Error", "Please enter a valid Name and Age.")
             return
         
@@ -143,15 +137,13 @@ class ExcelApp:
             sheet = wb.active
             
             row_index = self.tree.index(selected[0]) + 2  # Excel rows start from 1 and we have headers
-            sheet.cell(row=row_index, column=1, value=new_name)
-            sheet.cell(row=row_index, column=2, value=int(new_age))
-            sheet.cell(row=row_index, column=3, value=new_subscription)
-            sheet.cell(row=row_index, column=4, value=new_employment)
+            for i, value in enumerate(new_values, start=1):
+                sheet.cell(row=row_index, column=i, value=value)
             
             wb.save(self.filepath)
             wb.close()
             
-            self.tree.item(selected[0], values=(new_name, new_age, new_subscription, new_employment))
+            self.tree.item(selected[0], values=new_values)
         except Exception as e:
             messagebox.showerror("Error", f"Failed to update data: {e}")
 
