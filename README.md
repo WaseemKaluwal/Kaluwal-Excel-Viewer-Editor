@@ -31,7 +31,9 @@ pip install openpyxl ttkbootstrap
 - `ttkbootstrap` (for enhanced UI)
 
 ## Screenshots
-_Add screenshots of the application here._
+
+![Kaluwal Excel Viewer](https://github.com/user-attachments/assets/a1aa6625-2661-430c-9836-f146c88b099f)
+
 
 ## License
 This project is open-source and available under the MIT License.
